@@ -299,12 +299,12 @@ class RuleProvider:
             mid_shoulder_hip_knee_points = [[list(MidShoulder)[0], list(MidShoulder)[1]], [list(MidHip)[0], list(MidHip)[1]],
                     [list(MidHip)[0] - 50, list(MidHip)[1]]]
             if mid_shoulder_hip_knee:
-                if mid_shoulder_hip_knee < (95 - self.th):
+                if mid_shoulder_hip_knee < (79):
                     backrest_score = 2
                     c = 'red'
                     self.description = self.description + f'Back rest is BENT FORWARD from - ' \
                                                           f'mid shoulder_hip_knee angle: {mid_shoulder_hip_knee}\n'
-                elif mid_shoulder_hip_knee > (110 + self.th):
+                elif mid_shoulder_hip_knee > (108):
                     backrest_score = 2
                     self.description = self.description + f'Back rest is BENT BACKWARD - ' \
                                                           f'mid shoulder_hip_knee angle: {mid_shoulder_hip_knee}\n'
