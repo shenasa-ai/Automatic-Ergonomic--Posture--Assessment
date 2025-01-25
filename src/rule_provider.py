@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 class RuleProvider:
     result = {
         'image_number': [],
-        'back': []
+        'back': [],
+        'monitor': []
     }
     def __init__(self, pose_detector):
         self.image = None
@@ -77,6 +78,7 @@ class RuleProvider:
 
             # Monitor (0/6)
             monitor_score = self.get_monitor_score()
+            self.result['monitor'].append(monitor_score)
             self.figure_side.savefig(f'{self.output_path}/{self.file_name}.JPG')
             #self.figure_side.close()
             plt.close()
@@ -342,37 +344,38 @@ class RuleProvider:
         l_hip_shoulder_ear_angle = self.get_l_hip_shoulder_ear_angle()
         l_hip_shoulder_ear_points = [self.pose_detector.LHip, self.pose_detector.LShoulder, self.pose_detector.LEar]
 
-        if r_hip_shoulder_ear_angle or l_hip_shoulder_ear_angle:
-            if r_hip_shoulder_ear_angle:
-                if r_hip_shoulder_ear_angle < 140:
-                    monitor_score += 1
-                    c = 'red'
-                    #self.draw_lines_between_pairs(r_hip_shoulder_ear_points, False)
-                    self.description = self.description + f'Neck is BENT FORWARD from right side view - ' \
-                                                          f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
-                elif r_hip_shoulder_ear_angle > 200:
-                    monitor_score += 3
-                    c = 'red'
-                    #self.draw_lines_between_pairs(r_hip_shoulder_ear_points, False)
-                    self.description = self.description + f'Neck is BENT BACKWARD from right side view - ' \
-                                                          f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
-                else:
-                    c = 'green'
-                    #self.draw_lines_between_pairs(r_hip_shoulder_ear_points)
-                    self.description = self.description + f'Neck is NORMAL from right side view - ' \
-                                                          f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
-                self.draw_lines_between_pairs(axis, r_hip_shoulder_ear_points, c)
-                self.put_text_add_description(axis, self.output_path, self.file_name, 'neck angle', r_hip_shoulder_ear_angle, c)
+        # if r_hip_shoulder_ear_angle or l_hip_shoulder_ear_angle:
+        if l_hip_shoulder_ear_angle:
+            # if r_hip_shoulder_ear_angle:
+            #     if r_hip_shoulder_ear_angle < 140:
+            #         monitor_score += 1
+            #         c = 'red'
+            #         #self.draw_lines_between_pairs(r_hip_shoulder_ear_points, False)
+            #         self.description = self.description + f'Neck is BENT FORWARD from right side view - ' \
+            #                                               f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
+            #     elif r_hip_shoulder_ear_angle > 200:
+            #         monitor_score += 3
+            #         c = 'red'
+            #         #self.draw_lines_between_pairs(r_hip_shoulder_ear_points, False)
+            #         self.description = self.description + f'Neck is BENT BACKWARD from right side view - ' \
+            #                                               f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
+            #     else:
+            #         c = 'green'
+            #         #self.draw_lines_between_pairs(r_hip_shoulder_ear_points)
+            #         self.description = self.description + f'Neck is NORMAL from right side view - ' \
+            #                                               f'right hip_shoulder_ear angle: {r_hip_shoulder_ear_angle}\n'
+            #     self.draw_lines_between_pairs(axis, r_hip_shoulder_ear_points, c)
+            #     self.put_text_add_description(axis, self.output_path, self.file_name, 'neck angle', r_hip_shoulder_ear_angle, c)
 
             if l_hip_shoulder_ear_angle:
-                if l_hip_shoulder_ear_angle < 140:
-                    monitor_score += 1
+                if l_hip_shoulder_ear_angle < 150 - 10:
+                    monitor_score = 2
                     c = 'red'
                     #self.draw_lines_between_pairs(l_hip_shoulder_ear_points, False)
                     self.description = self.description + f'Neck is BENT FORWARD from left side view - ' \
                                                           f'left hip_shoulder_ear angle: {l_hip_shoulder_ear_angle} \n'
-                elif l_hip_shoulder_ear_angle > 200:
-                    monitor_score += 3
+                elif l_hip_shoulder_ear_angle > 150 + 18:
+                    monitor_score = 3
                     c = 'red'
                     #self.draw_lines_between_pairs(l_hip_shoulder_ear_points, False)
                     self.description = self.description + f'Neck is BENT BACKWARD from left side view - ' \
