@@ -3,38 +3,72 @@ from collections import Counter
 import pandas as pd
 import numpy as np
 import os
+from typing import List, Dict
 
 
-def FinalizeImgLbl(img_path, lbl_path, save_path: str='.'):
-    lbl, img_nmbr = [], []
-    columns = ['file name', 'chair 1-2', 'back support', 'monitor']
-    for file in lbl_path:
-        lbl.append(pd.read_csv(file, usecols=columns))
-    must_drop = lbl[1][(lbl[1] == 0).any(axis=1)].index.values.tolist()
-    for ind, df in enumerate(lbl):
-        lbl[ind] = df.drop(index=must_drop)
-        temp = lbl[ind]['file name']
-        lbl[ind].drop('file name', axis=1, inplace=True)
-        img_nmbr.extend(map(lambda x: int(x.split(sep='_')[1]), temp))
-    temp = Counter(img_nmbr)
-    for item in temp.keys():
-        if temp[item] != 3:
-            print('a difference has been found')
-    print('pictures are same')
-    chair = pd.concat([df['chair 1-2'] for df in lbl], axis=1).to_numpy()
-    back = pd.concat([df['back support'] for df in lbl], axis=1).to_numpy()
-    monitor = pd.concat([df['monitor'] for df in lbl], axis=1).to_numpy()
-    res = {'image_number': list(set(img_nmbr)), 'chair': [], 'chair_rates': [], 'back': [], 'back_rates': [],
-           'monitor': [], 'monitor_rates': []}
-    inx = 1
-    for cat in [chair, back, monitor]:
-        agg_tmp = aggregate_raters(cat)[0]
-        for i, sub in enumerate(agg_tmp):
-            res[list(res.keys())[inx]].append(np.argmax(sub) + 1)
-            res[list(res.keys())[inx + 1]].append(cat[i])
-        inx += 2
-    sorted_data = pd.DataFrame(res)
+def finalize_image_labels(
+        img_path: str,
+        lbl_paths: List[str],
+        save_path: str = '.',
+        columns: List[str] = ['file name', 'chair 1-2', 'back support', 'monitor']
+) -> None:
+    """
+    Processes image labels from multiple CSV files, calculates Fleiss' Kappa, and saves the final labels.
+    Removes images that do not have consistent labeling across all files.
+
+    Parameters:
+    - img_path: Path to the directory containing images.
+    - lbl_paths: List of paths to CSV files containing labels.
+    - save_path: Directory to save the final labels CSV file. Defaults to the current directory.
+    - columns: List of column names to process. Defaults to ['file name', 'chair 1-2', 'back support', 'monitor'].
+    """
+    # Read and process label files
+    labels = [pd.read_csv(file, usecols=columns) for file in lbl_paths]
+
+    # Identify rows to drop (where any column has a value of 0)
+    rows_to_drop = labels[0][(labels[0] == 0).any(axis=1)].index
+    labels = [df.drop(index=rows_to_drop) for df in labels]
+
+    # Extract image numbers from file names
+    image_numbers = []
+    for df in labels:
+        file_names = df['file name']
+        df.drop('file name', axis=1, inplace=True)
+        image_numbers.extend(int(name.split('_')[1]) for name in file_names)
+
+    # Check for consistency in image numbers
+    image_counter = Counter(image_numbers)
+    if any(count != 3 for count in image_counter.values()):
+        print('A difference has been found in image labeling.')
+    else:
+        print('All pictures are consistently labeled.')
+
+    # Combine ratings for each category
+    categories = ['chair 1-2', 'back support', 'monitor']
+    combined_data = {cat: pd.concat([df[cat] for df in labels], axis=1).to_numpy() for cat in categories}
+
+    # Prepare results dictionary
+    results = {
+        'image_number': list(set(image_numbers)),
+        'chair': [], 'chair_rates': [],
+        'back': [], 'back_rates': [],
+        'monitor': [], 'monitor_rates': []
+    }
+
+    # Calculate Fleiss' Kappa and populate results
+    for i, (cat, data) in enumerate(combined_data.items()):
+        aggregated = aggregate_raters(data)[0]
+        for j, row in enumerate(aggregated):
+            results[list(results.keys())[2 * i + 1]].append(np.argmax(row) + 1)
+            results[list(results.keys())[2 * i + 2]].append(data[j])
+
+    # Save final labels to CSV
+    sorted_data = pd.DataFrame(results)
     sorted_data.to_csv(f'{save_path}/final_labels.csv', index=False)
-    images = sorted([int(i.split(sep='_')[1].split(sep='.')[0]) for i in os.listdir(img_path)])
-    for img in set(images) - set(sorted_data['image_number']):
+
+    # Remove images without consistent labeling
+    image_files = sorted(int(file.split('_')[1].split('.')[0]) for file in os.listdir(img_path))
+    images_to_remove = set(image_files) - set(sorted_data['image_number'])
+    for img in images_to_remove:
         os.remove(f'{img_path}/side_{img}.jpg')
+    print(f"Removed {len(images_to_remove)} inconsistent images.")

@@ -7,7 +7,7 @@ from pose_detector import PoseDetector
 from openpose_detector import OpenPoseDetector
 from mediapipe_pose_detector import MediapipePoseDetector
 from openpifpaf_pose_detector import OpenpifpafPoseDetector
-from rosa_rule_provider import RosaRuleProvider
+from rule_provider import RuleProvider
 
 deep_model = "Openpifpaf" #"Mediapipe" #"Openpifpaf"  #"openpose" 
 
@@ -31,7 +31,7 @@ def assess_posture(root_dir, camera_view_point, pose_detector, rosa_rule_provide
             # import pudb; pu.db
         resized_image = pose_detector.preprocess_image(image)
         points = pose_detector.get_joint_points()
-        position_status = rosa_rule_provider.get_posture_status(resized_image, points, file_name, camera_view_point, args.output_path, args.front_labels_path)
+        position_status = rosa_rule_provider.get_posture_status(resized_image, points, file_name, camera_view_point, args.output_path, args.front_labels_path, args.side_labels_path)
         #rosa_rule_provider.save_image(position_status, args.output_path, file_name)
         print('*******************************************************************************************')
     pd.DataFrame(rosa_rule_provider.result).to_csv(f'./pred_{deep_model}.csv', index=False)
@@ -48,7 +48,7 @@ def main():
         pose_detector = OpenpifpafPoseDetector()
     elif deep_model == "Mediapipe":
         pose_detector = MediapipePoseDetector()
-    rosa_rule_provider = RosaRuleProvider(pose_detector)
+    rosa_rule_provider = RuleProvider(pose_detector)
     if os.path.exists(f'{args.output_path}/log.txt'):
         os.remove(f'{args.output_path}/log.txt')
     sub_dirs = [x[0] for x in os.walk(input_directory)]
