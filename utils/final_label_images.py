@@ -10,7 +10,9 @@ def finalize_image_labels(
         img_path: str,
         lbl_paths: List[str],
         save_path: str = '.',
-        columns: List[str] = ['file name', 'chair 1-2', 'back support', 'monitor']
+
+        rem_img=False,
+        columns=None
 ) -> None:
     """
     Processes image labels from multiple CSV files, calculates Fleiss' Kappa, and saves the final labels.
@@ -23,11 +25,22 @@ def finalize_image_labels(
     - columns: List of column names to process. Defaults to ['file name', 'chair 1-2', 'back support', 'monitor'].
     """
     # Read and process label files
+    if columns is None:
+        columns = ['file name', 'chair 1-2', 'back support', 'monitor']
     labels = [pd.read_csv(file, usecols=columns) for file in lbl_paths]
 
     # Identify rows to drop (where any column has a value of 0)
-    rows_to_drop = labels[0][(labels[0] == 0).any(axis=1)].index
-    labels = [df.drop(index=rows_to_drop) for df in labels]
+
+    # Define the conditions to check
+    conditions = ['wrong', 'front', 0]
+    rows_to_drop = set()
+
+    for df in labels:
+        # Find rows that match any of the conditions
+        rows_to_drop.update(df[df.map(lambda x: x in conditions).any(axis=1)].index)
+
+    for i, df in enumerate(labels):
+        labels[i] = df.drop(list(rows_to_drop))
 
     # Extract image numbers from file names
     image_numbers = []
@@ -57,6 +70,7 @@ def finalize_image_labels(
 
     # Calculate Fleiss' Kappa and populate results
     for i, (cat, data) in enumerate(combined_data.items()):
+        data = [[int(lbl) for lbl in x] for x in data]
         aggregated = aggregate_raters(data)[0]
         for j, row in enumerate(aggregated):
             results[list(results.keys())[2 * i + 1]].append(np.argmax(row) + 1)
@@ -67,8 +81,9 @@ def finalize_image_labels(
     sorted_data.to_csv(f'{save_path}/final_labels.csv', index=False)
 
     # Remove images without consistent labeling
-    image_files = sorted(int(file.split('_')[1].split('.')[0]) for file in os.listdir(img_path))
-    images_to_remove = set(image_files) - set(sorted_data['image_number'])
-    for img in images_to_remove:
-        os.remove(f'{img_path}/side_{img}.jpg')
-    print(f"Removed {len(images_to_remove)} inconsistent images.")
+    if rem_img:
+        image_files = sorted(int(file.split('_')[1].split('.')[0]) for file in os.listdir(img_path))
+        images_to_remove = set(image_files) - set(sorted_data['image_number'])
+        for img in images_to_remove:
+            os.remove(f'{img_path}/side_{img}.jpg')
+        print(f"Removed {len(images_to_remove)} inconsistent images.")
